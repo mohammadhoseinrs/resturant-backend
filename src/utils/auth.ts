@@ -1,13 +1,18 @@
-import { hash } from "bcrypt";
+import { compare, hash } from "bcrypt";
 import jwt from "jsonwebtoken";
+
 export const hashingPassword = async (password: string) => {
   const hashedPassowrd = await hash(password, 10);
   return hashedPassowrd;
 };
 
+export const comparePassword = async (pass: string, hashPass: string) => {
+  const comparePassword = await compare(pass, hashPass);
+  return comparePassword;
+};
+
 export const generateAccessToken = (email: string) => {
   try {
-
     const accessToken = jwt.sign(
       { email },
       process.env.ACCESS_TOKEN_SECRET as string,

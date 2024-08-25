@@ -2,11 +2,13 @@ import { Request, Response } from "express";
 import { getUserByEmail, registerUser } from "../models/auth";
 import { TypeRegister } from "../types";
 import {
+  comparePassword,
   generateAccessToken,
   generateRefreshToken,
   hashingPassword,
 } from "../utils/auth";
 import refreshTokens from "../utils/tokenStore";
+import path from "path";
 
 export const register = async (
   req: Request<{}, {}, TypeRegister>,
@@ -42,9 +44,35 @@ export const register = async (
 
     const accessToken = generateAccessToken(user.email);
     const refreshToken = generateRefreshToken(user.email);
-    console.log({ accessToken, refreshToken });
 
     refreshTokens[refreshToken] = username;
+    res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true });
+    return res.status(200).json({ user, accessToken });
+  } catch (err) {
+    return res.status(500).json(err);
+  }
+};
+
+export const login = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({
+        message: "You don't have an account",
+      });
+    }
+    const isPasswordOk = await comparePassword(password, user.password);
+    if (!isPasswordOk) {
+      return res.status(400).json({
+        message: "The password is not correct",
+      });
+    }
+    const accessToken = generateAccessToken(user.email);
+    const refreshToken = generateRefreshToken(user.email);
+    refreshTokens[refreshToken] = email;
+
     res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true });
     return res.status(200).json({ user, accessToken });
   } catch (err) {
